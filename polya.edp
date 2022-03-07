@@ -1,3 +1,9 @@
+// run code with: FreeFem++ polya.edp
+//general explination http://www.cmap.polytechnique.fr/~beniamin.bogosel/faber_krahn_polygons.html
+
+
+
+//returns a vector of random numbers between 0 and 1
 func real[int] rand(int h){
   real[int] vec(h);
   for(int i = 0;i<h;i++){
@@ -6,45 +12,55 @@ func real[int] rand(int h){
   return vec;
 }
 
-int n = 5;
-int k = 0;
-real epst  = 0.1;
+//    ns - numSides
+//    das - deltaAngleScale
+func real[int] calculateAngles(int ns, real das){
+      real[int] deltaAngle = rand(ns);                // entries b/w 0 and 1 to scale angle shift
+      real[int] angles = 1:ns;                        // fill with 1,2,3,...,numSides
 
-real tresh = 0.03;
+      // Sets the angles to regular angles then shifts them by deltaAngle
+      angles = 2*pi/ns*angles;                        // cuts 2pi into numSides equal pieces
+      angles = angles+das*deltaAngle;                 // deforms it into a non-regular by shifting the angle by deltaAngle
+
+      return angles;
+}
+
+//CONSTANTS
+int numSides = 5;
+int numEigenvalues = 0;
+real stepSize  = 0.1;
+real deltaAngleScale = 0.5;                           //changes how different the polygon is from regular
+
+
+
+real[int] angles = calculateAngles(numSides, deltaAngleScale);
 
 //real[int] xx = [0, 0.2,  0.5,   1  ,1.1, 2,  2,  1.2,0];
 //real[int] yy = [0,-0.7, -0.9,  -0.8,0  ,0.3,1  ,1.5,1];
-real[int] th = rand(n);
-//th.sort;
-//cout << "Angles " << th << endl;
-real[int] reg = 1:n;
-reg = 2*pi/n*reg;
-reg = reg+0.5*th;
 
-real[int] xx(n);
-real[int] yy(n);
-
-th = 2*pi*th;
-xx = cos(reg);
-yy = sin(reg);
+// array of x/y components
+real[int] xx(numSides);
+real[int] yy(numSides);
+xx = cos(angles);
+yy = sin(angles);
 
 
 real[int] lengths;
 
-int[int] one(n);
+int[int] one(numSides);
 one = 1;
 verbosity = 0;
 
 int[int] NC=20*one;  
 
 
-int[int] ind1 = 0:1:n-1;
+int[int] ind1 = 0:1:numSides-1;
 int[int] ind2 = ind1;
 int[int] ind3 = ind1;
-ind2(1:n-1) = 0:1:n-2;
-ind2(0) = n-1;
-ind3(n-1) = 0;
-ind3(0:n-2) = 1:n-1;
+ind2(1:numSides-1) = 0:1:numSides-2;
+ind2(0) = numSides-1;
+ind3(numSides-1) = 0;
+ind3(0:numSides-2) = 1:numSides-1;
 
 real alpha = 0.001;
 real minv = 100000;
@@ -62,40 +78,45 @@ border poly(t=0,1; i){
 
 
 mesh Th = buildmesh (poly(NC));
-//Th= adaptmesh(Th,1./50,IsMetric=1);
 
+// shows Mesh, slows down the steps a lot
+//Th= adaptmesh(Th,1./50,IsMetric=1);
 //plot(Th);
+
+
 fespace Vh(Th,P1);
 // variables on the mesh
 Vh u1,u2;
 
-int[int] BC = 0:1:n-1; // label indexes for each disk
-                           // used for the boundary condition
+int[int] BC = 0:1:numSides-1;      // label indexes for each disk
+                            // used for the boundary condition
 
 // Define the problem in weak form
 varf a(u1,u2) = int2d(Th)
 (dx(u1)*dx(u2) + dy(u1)*dy(u2))+on(1,u1=0)//on(C1,C2,C3,C4,u1=1)
                                +on(BC,u1=0);     
 varf b([u1],[u2]) = int2d(Th)(  u1*u2 ) ; 
+
 // define matrices for the eigenvalue problem
 matrix A= a(Vh,Vh,solver=Crout,factorize=1); 
 matrix B= b(Vh,Vh,solver=CG,eps=1e-20); 
 
 // we are interested only in the first eigenvalue
-int eigCount = k+1;
-real[int] ev(eigCount); // Holds eigenvalues
-Vh[int] eV(eigCount);   // holds eigenfunctions
+int eigCount = numEigenvalues+1;
+real[int] eigenValue(eigCount); // Holds eigenvalues
+Vh[int] eigenFunction(eigCount);   // holds eigenfunctions
 // Solve Ax=lBx
-int numEigs = EigenValue(A,B,sym=true,sigma=0,value=ev,vector=eV);
+int numEigs = EigenValue(A,B,sym=true,sigma=0,value=eigenValue,vector=eigenFunction);
 
-if(int2d(Th)(eV[k])<0){
-  eV[k] = -eV[k];
+// make all of the eigenfunctions positive
+if(int2d(Th)(eigenFunction[numEigenvalues])<0){
+  eigenFunction[numEigenvalues] = -eigenFunction[numEigenvalues];
 }
 
-real[int] derx(n);
-real[int] dery(n);
-real[int] ax(n);
-real[int] ay(n);
+real[int] derx(numSides);
+real[int] dery(numSides);
+real[int] ax(numSides);
+real[int] ay(numSides);
 mesh Eh = emptymesh(Th);
 fespace Wh(Eh,P1);
 real l1,l2;
@@ -104,10 +125,10 @@ Wh av,ap;
 real val1,val2;  
 Vh ff = 1;
 real ar = int2d(Th)(ff);
-real[int] diffs(n);
-real[int] dots(n);
+real[int] diffs(numSides);
+real[int] dots(numSides);
 
-for(int i=0;i<n;i++){
+for(int i=0;i<numSides;i++){
 l1 = sqrt((xx[i]-xx[ind3(i)])^2+(yy[i]-yy[ind3(i)])^2);
 l2 = sqrt((xx[i]-xx[ind2(i)])^2+(yy[i]-yy[ind2(i)])^2);
 diffs[i] = abs(l1-l2);
@@ -127,11 +148,11 @@ ap = (l1 - (sqrt((xx[i]-x)^2+(yy[i]-y)^2)))/l1;
 //val2 = int1d(Th,ind2(i))(av);
 //cout << "Integral " << val2 << endl;
 
-derx[i] = -int1d(Th,i)(ap*(dx(eV[k])*N.x+dy(eV[k])*N.y)^2*N.x)-
-      int1d(Th,ind2(i))(av*(dx(eV[k])*N.x+dy(eV[k])*N.y)^2*N.x);
+derx[i] = -int1d(Th,i)(ap*(dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunction[numEigenvalues])*N.y)^2*N.x)-
+      int1d(Th,ind2(i))(av*(dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunction[numEigenvalues])*N.y)^2*N.x);
 
-dery[i] = -int1d(Th,i)(ap*(dx(eV[k])*N.x+dy(eV[k])*N.y)^2*N.y)-
-      int1d(Th,ind2(i))(av*(dx(eV[k])*N.x+dy(eV[k])*N.y)^2*N.y);
+dery[i] = -int1d(Th,i)(ap*(dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunction[numEigenvalues])*N.y)^2*N.y)-
+      int1d(Th,ind2(i))(av*(dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunction[numEigenvalues])*N.y)^2*N.y);
 
 ax[i] = int1d(Th,i)(ap*N.x)+
       int1d(Th,ind2(i))(av*N.x);
@@ -146,25 +167,22 @@ real amin   = dots.min;
 
 derx = derx+ax;
 dery = dery+ay;
-real[int] integrals(n);
-//for(int i=0;i<n;i++)
-//integrals[i] = int1d(Th,i)((dx(eV[k])*N.x+dy(eV[k])*N.y)^2);
+real[int] integrals(numSides);
+//for(int i=0;i<numSides;i++)
+//integrals[i] = int1d(Th,i)((dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunction[numEigenvalues])*N.y)^2);
 //cout << "Integrals " << integrals << endl;
 
-xx = xx-epst*derx;
-yy = yy-epst*dery;
+xx = xx-stepSize*derx;
+yy = yy-stepSize*dery;
 
-//if(maxdif<tresh){
- // epst= epst/5;
- // tresh = tresh/5;
-//}
+// decrease step size as time goes on
 if(count%200 == 0){
-epst = epst/10;
+stepSize = stepSize/10;
 }
 
 count++;
-plot(eV[k],fill=true,ShowAxes = 0);
-cout << count << " " << ev[0]+ar << " " << epst << " " << maxdif << 
+plot(eigenFunction[numEigenvalues],fill=true,ShowAxes = 0);
+cout << count << " " << eigenValue[0]+ar << " " << stepSize << " " << maxdif << 
 " " << amax-amin << endl;
 if(count>1000)
 break;
