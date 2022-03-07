@@ -2,7 +2,7 @@
 //general explination http://www.cmap.polytechnique.fr/~beniamin.bogosel/faber_krahn_polygons.html
 
 
-//returns a vector of random numbers between 0 and 1
+//returns a vector of random numbers in [0,1]
 func real[int] rand(int h){
   real[int] vec(h);
   for(int i = 0;i<h;i++){
@@ -24,17 +24,38 @@ func real[int] calculateAngles(int ns, real das){
       return angles;
 }
 
-func int calculateCoords(real[int] &xx, real[int] &yy, real[int] angles, real[int] radii){
+//only works if inner radius is smaller than outer radius
+func real[int] calculateRadii(int numSides, real innerRadius, real outerRadius){
+      real diff = outerRadius - innerRadius;
+      real[int] lengths(numSides);
+
+      // Sets lengths to have values between inner and outer radius
+      lengths = innerRadius;     
+      lengths = lengths + rand(numSides)*diff;
+
+      return lengths;
+}
+
+func int calculateCoords(int numSides, real[int] &xx, real[int] &yy, real[int] angles, real[int] radii){
+      //polar conversion
       xx = cos(angles);
       yy = sin(angles);
+
+      for(int i = 0; i < numSides; i++){
+            xx[i] = radii[i]*xx[i];
+            yy[i] = radii[i]*yy[i];
+      }
       return 0;
 }
 
 //CONSTANTS
+verbosity = 0;                                        // global variable in FreeFem that determines how much output it prints (from 0 to 3)
 
 //polygon
 int numSides = 5;
 int numEigenvalues = 0;
+real innerRadius = 0.5;
+real outerRadius = 1.5;
 real deltaAngleScale = 0.5;                           // changes how different the polygon is from regular
 real[int] xx(numSides);                               // x value for each vertex
 real[int] yy(numSides);                               // y value for each vertex
@@ -42,8 +63,10 @@ real[int] radii(numSides);                            // distance from center to
 real[int] angles(numSides);
 
 //runtime
-verbosity = 0;                                        // global variable in FreeFem that determines how much output it prints (from 0 to 3)
+int maxIterations = 1000;
 real stepSize  = 0.1;
+int stepSizeDuration = 200;
+int stepDecreaseFactor = 10;
 
 // approximiation
 int[int] numMeshCells(numSides);  
@@ -51,10 +74,9 @@ numMeshCells = 20;
 
 // calculate polygon data
 angles = calculateAngles(numSides, deltaAngleScale);
-calculateCoords(xx, yy, angles, radii);
+radii = calculateRadii(numSides, innerRadius, outerRadius);
+calculateCoords(numSides, xx, yy, angles, radii);
 
-//real[int] xx = [0, 0.2,  0.5,   1  ,1.1, 2,  2,  1.2,0];
-//real[int] yy = [0,-0.7, -0.9,  -0.8,0  ,0.3,1  ,1.5,1];
 
 
 int[int] ind1 = 0:1:numSides-1;
@@ -183,15 +205,15 @@ xx = xx-stepSize*derx;
 yy = yy-stepSize*dery;
 
 // decrease step size as time goes on
-if(count%200 == 0){
-stepSize = stepSize/10;
+if(count % stepSizeDuration == 0){
+stepSize = stepSize / stepDecreaseFactor;
 }
 
 count++;
 plot(eigenFunction[numEigenvalues],fill=true,ShowAxes = 0);
 cout << count << " " << eigenValue[0]+ar << " " << stepSize << " " << maxdif << 
 " " << amax-amin << endl;
-if(count>1000)
+if(count>maxIterations)
 break;
 }
 
