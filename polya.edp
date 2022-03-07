@@ -93,12 +93,10 @@ ind2(0) = numSides-1;
 ind3(numSides-1) = 0;
 ind3(0:numSides-2) = 1:numSides-1;
 
-real alpha = 0.001;
-real minv = 100000;
-
 
 // Main Loop
-while(alpha > alphaCutoff && iterations <= maxIterations){
+// TODO: terminate early if eigenvalue changes less than a cutoff value
+while(iterations <= maxIterations){
 
 
 border poly(t=0,1; i){
@@ -148,36 +146,37 @@ if(int2d(Th)(eigenFunction[numEigenvalues])<0){
   eigenFunction[numEigenvalues] = -eigenFunction[numEigenvalues];
 }
 
-// end of solver? ^
-
+// partial derivatives of lambda wrt x/y
 real[int] derx(numSides);
 real[int] dery(numSides);
+// 
 real[int] ax(numSides);
 real[int] ay(numSides);
 mesh Eh = emptymesh(Th);
-fespace Wh(Eh,P1);
-real l1,l2;
+fespace Wh(Eh,P1);      // P1 - piecewise linear continuous finite element
+real sideLengthOne,sideLengthTwo;
 
 Wh av,ap;
 real val1,val2;  
 Vh ff = 1;
 real polygonArea = int2d(Th)(ff);
-real[int] diffs(numSides);
+real[int] sideLengthDiffs(numSides);
 real[int] dots(numSides);
 
 for(int i=0;i<numSides;i++){
-l1 = sqrt((xx[i]-xx[ind3(i)])^2+(yy[i]-yy[ind3(i)])^2);
-l2 = sqrt((xx[i]-xx[ind2(i)])^2+(yy[i]-yy[ind2(i)])^2);
-diffs[i] = abs(l1-l2);
+//calculate side lengths adj to ith vertex
+sideLengthOne = sqrt((xx[i]-xx[ind3(i)])^2+(yy[i]-yy[ind3(i)])^2);
+sideLengthTwo = sqrt((xx[i]-xx[ind2(i)])^2+(yy[i]-yy[ind2(i)])^2);
+sideLengthDiffs[i] = abs(sideLengthOne-sideLengthTwo);
 dots[i] = (xx[i]-xx[ind3(i)])*(xx[i]-xx[ind2(i)])+
           (yy[i]-yy[ind3(i)])*(yy[i]-yy[ind2(i)]);
 //cout << ind2(i) << " " << ind3(i) << endl;
-//cout  <<  l1 << "  " << l2 << endl;
+//cout  <<  sideLengthOne << "  " << sideLengthTwo << endl;
 
-av = (l2- (sqrt((xx[i]-x)^2+(yy[i]-y)^2)))/l2;
+av = (sideLengthTwo- (sqrt((xx[i]-x)^2+(yy[i]-y)^2)))/sideLengthTwo;
 //plot(av,fill=true,value=true);
  
-ap = (l1 - (sqrt((xx[i]-x)^2+(yy[i]-y)^2)))/l1;
+ap = (sideLengthOne - (sqrt((xx[i]-x)^2+(yy[i]-y)^2)))/sideLengthOne;
 //plot(ap,fill=true,value=true);
  
 //val1 = int1d(Th,i)(ap);
@@ -191,6 +190,7 @@ derx[i] = -int1d(Th,i)(ap*(dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunctio
 dery[i] = -int1d(Th,i)(ap*(dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunction[numEigenvalues])*N.y)^2*N.y)-
       int1d(Th,ind2(i))(av*(dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunction[numEigenvalues])*N.y)^2*N.y);
 
+// I think these are the alpha constants in the fundamental solutions
 ax[i] = int1d(Th,i)(ap*N.x)+
       int1d(Th,ind2(i))(av*N.x);
 
@@ -198,7 +198,8 @@ ay[i] = int1d(Th,i)(ap*N.y)+
       int1d(Th,ind2(i))(av*N.y);
 
 }
-real maxdif = diffs.max;
+
+real maxSidelengthDiff = sideLengthDiffs.max;
 real amax   = dots.max;
 real amin   = dots.min;
 
@@ -219,7 +220,7 @@ stepSize = stepSize / stepDecreaseFactor;
 
 iterations++;
 plot(eigenFunction[numEigenvalues],fill=true,ShowAxes = 0);
-cout << iterations << " " << eigenValue[0]+polygonArea << " " << stepSize << " " << maxdif << 
+cout << iterations << " " << eigenValue[0]+polygonArea << " " << stepSize << " " << maxSidelengthDiff << 
 " " << amax-amin << " " << polygonArea << endl;
 }
 
