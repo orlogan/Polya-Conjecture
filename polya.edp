@@ -48,7 +48,9 @@ func int calculateCoords(int numSides, real[int] &xx, real[int] &yy, real[int] a
       return 0;
 }
 
-//CONSTANTS
+//
+// CONSTANTS
+//
 verbosity = 0;                                        // global variable in FreeFem that determines how much output it prints (from 0 to 3)
 
 //polygon
@@ -67,6 +69,9 @@ int maxIterations = 1000;
 real stepSize  = 0.1;
 int stepSizeDuration = 200;
 int stepDecreaseFactor = 10;
+int alphaCutoff = 1e-10;
+
+int iterations = 1;
 
 // approximiation
 int[int] numMeshCells(numSides);  
@@ -89,10 +94,10 @@ ind3(0:numSides-2) = 1:numSides-1;
 
 real alpha = 0.001;
 real minv = 100000;
-int count = 1;
 
 
-while(alpha>1e-10){
+// Main Loop
+while(alpha > alphaCutoff && iterations <= maxIterations){
 
 
 border poly(t=0,1; i){
@@ -105,7 +110,6 @@ border poly(t=0,1; i){
 mesh Th = buildmesh (poly(numMeshCells));
 
 // shows Mesh, slows down the steps a lot
-//Th= adaptmesh(Th,1./50,IsMetric=1);
 //plot(Th);
 
 
@@ -117,13 +121,13 @@ fespace Vh(Th,P1);
 // variables(FE-functions) on the mesh
 Vh u1,u2;
 
-int[int] BC = 0:1:numSides-1;       // label indexes for each disk
-                                    // used for the boundary condition
+int[int] boundaryConditions = 0:1:numSides-1;         // label indexes for each disk
+                                                      // used for the boundary condition
 
 // Define the problem in weak form
 varf a(u1,u2) = int2d(Th)
 (dx(u1)*dx(u2) + dy(u1)*dy(u2))+on(1,u1=0)//on(C1,C2,C3,C4,u1=1)
-                               +on(BC,u1=0);     
+                               +on(boundaryConditions,u1=0);     
 varf b([u1],[u2]) = int2d(Th)(  u1*u2 ) ; 
 
 // define matrices for the eigenvalue problem
@@ -142,6 +146,8 @@ if(int2d(Th)(eigenFunction[numEigenvalues])<0){
   eigenFunction[numEigenvalues] = -eigenFunction[numEigenvalues];
 }
 
+// end of solver? ^
+
 real[int] derx(numSides);
 real[int] dery(numSides);
 real[int] ax(numSides);
@@ -153,7 +159,7 @@ real l1,l2;
 Wh av,ap;
 real val1,val2;  
 Vh ff = 1;
-real ar = int2d(Th)(ff);
+real polygonArea = int2d(Th)(ff);
 real[int] diffs(numSides);
 real[int] dots(numSides);
 
@@ -205,15 +211,15 @@ xx = xx-stepSize*derx;
 yy = yy-stepSize*dery;
 
 // decrease step size as time goes on
-if(count % stepSizeDuration == 0){
+if(iterations % stepSizeDuration == 0){
 stepSize = stepSize / stepDecreaseFactor;
 }
 
-count++;
+iterations++;
 plot(eigenFunction[numEigenvalues],fill=true,ShowAxes = 0);
-cout << count << " " << eigenValue[0]+ar << " " << stepSize << " " << maxdif << 
-" " << amax-amin << endl;
-if(count>maxIterations)
+cout << iterations << " " << eigenValue[0]+polygonArea << " " << stepSize << " " << maxdif << 
+" " << amax-amin << " " << polygonArea << endl;
+if(iterations>maxIterations)
 break;
 }
 
