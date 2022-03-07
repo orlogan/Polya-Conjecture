@@ -52,6 +52,7 @@ func int calculateCoords(int numSides, real[int] &xx, real[int] &yy, real[int] a
 // CONSTANTS
 //
 verbosity = 0;                                        // global variable in FreeFem that determines how much output it prints (from 0 to 3)
+real initTime = clock();                                   // saves clock time
 
 //polygon
 int numSides = 5;
@@ -124,6 +125,7 @@ Vh u1,u2;
 int[int] boundaryConditions = 0:1:numSides-1;         // label indexes for each disk
                                                       // used for the boundary condition
 
+//note varf
 // Define the problem in weak form
 varf a(u1,u2) = int2d(Th)
 (dx(u1)*dx(u2) + dy(u1)*dy(u2))+on(1,u1=0)//on(C1,C2,C3,C4,u1=1)
@@ -219,7 +221,6 @@ iterations++;
 plot(eigenFunction[numEigenvalues],fill=true,ShowAxes = 0);
 cout << iterations << " " << eigenValue[0]+polygonArea << " " << stepSize << " " << maxdif << 
 " " << amax-amin << " " << polygonArea << endl;
-if(iterations>maxIterations)
-break;
 }
 
+cout << "Calculated in " << clock() - initTime << " seconds..." << endl;
