@@ -24,31 +24,37 @@ func real[int] calculateAngles(int ns, real das){
       return angles;
 }
 
+func int calculateCoords(real[int] &xx, real[int] &yy, real[int] angles, real[int] radii){
+      xx = cos(angles);
+      yy = sin(angles);
+      return 0;
+}
+
 //CONSTANTS
 
 //polygon
 int numSides = 5;
 int numEigenvalues = 0;
 real deltaAngleScale = 0.5;                           // changes how different the polygon is from regular
+real[int] xx(numSides);                               // x value for each vertex
+real[int] yy(numSides);                               // y value for each vertex
+real[int] radii(numSides);                            // distance from center to a given vertex
+real[int] angles(numSides);
 
 //runtime
-verbosity = 1;                                        // global variable in FreeFem that determines how much output it prints (from 0 to 3)
+verbosity = 0;                                        // global variable in FreeFem that determines how much output it prints (from 0 to 3)
 real stepSize  = 0.1;
 
 // approximiation
 int[int] numMeshCells(numSides);  
 numMeshCells = 20;
 
-real[int] angles = calculateAngles(numSides, deltaAngleScale);
+// calculate polygon data
+angles = calculateAngles(numSides, deltaAngleScale);
+calculateCoords(xx, yy, angles, radii);
 
 //real[int] xx = [0, 0.2,  0.5,   1  ,1.1, 2,  2,  1.2,0];
 //real[int] yy = [0,-0.7, -0.9,  -0.8,0  ,0.3,1  ,1.5,1];
-
-// array of x/y components
-real[int] xx(numSides);
-real[int] yy(numSides);
-xx = cos(angles);
-yy = sin(angles);
 
 
 int[int] ind1 = 0:1:numSides-1;
