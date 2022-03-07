@@ -85,6 +85,11 @@ calculateCoords(numSides, xx, yy, angles, radii);
 
 
 
+// ind1 - an index for the vertices/sides of the polygon    [0,1,2,3,4]
+// ind2 - ind1 shifted to the right one                     [4,0,1,2,3]
+// ind3 - ind1 shifted to the left one                      [1,2,3,4,0]
+// This allows us to access the adjacent vertices without hassle
+
 int[int] ind1 = 0:1:numSides-1;
 int[int] ind2 = ind1;
 int[int] ind3 = ind1;
@@ -125,6 +130,9 @@ int[int] boundaryConditions = 0:1:numSides-1;         // label indexes for each 
 
 //note varf
 // Define the problem in weak form
+
+// TODO: WTF are a/b?
+
 varf a(u1,u2) = int2d(Th)
 (dx(u1)*dx(u2) + dy(u1)*dy(u2))+on(1,u1=0)//on(C1,C2,C3,C4,u1=1)
                                +on(boundaryConditions,u1=0);     
@@ -209,6 +217,8 @@ real[int] integrals(numSides);
 //for(int i=0;i<numSides;i++)
 //integrals[i] = int1d(Th,i)((dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunction[numEigenvalues])*N.y)^2);
 //cout << "Integrals " << integrals << endl;
+
+// TODO: See if removing specific vertices from the update below breaks things
 
 xx = xx-stepSize*derx;
 yy = yy-stepSize*dery;
