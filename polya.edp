@@ -2,7 +2,6 @@
 //general explination http://www.cmap.polytechnique.fr/~beniamin.bogosel/faber_krahn_polygons.html
 
 
-
 //returns a vector of random numbers between 0 and 1
 func real[int] rand(int h){
   real[int] vec(h);
@@ -26,12 +25,19 @@ func real[int] calculateAngles(int ns, real das){
 }
 
 //CONSTANTS
+
+//polygon
 int numSides = 5;
 int numEigenvalues = 0;
+real deltaAngleScale = 0.5;                           // changes how different the polygon is from regular
+
+//runtime
+verbosity = 1;                                        // global variable in FreeFem that determines how much output it prints (from 0 to 3)
 real stepSize  = 0.1;
-real deltaAngleScale = 0.5;                           //changes how different the polygon is from regular
 
-
+// approximiation
+int[int] numMeshCells(numSides);  
+numMeshCells = 20;
 
 real[int] angles = calculateAngles(numSides, deltaAngleScale);
 
@@ -43,15 +49,6 @@ real[int] xx(numSides);
 real[int] yy(numSides);
 xx = cos(angles);
 yy = sin(angles);
-
-
-real[int] lengths;
-
-int[int] one(numSides);
-one = 1;
-verbosity = 0;
-
-int[int] NC=20*one;  
 
 
 int[int] ind1 = 0:1:numSides-1;
@@ -77,19 +74,23 @@ border poly(t=0,1; i){
 }
 
 
-mesh Th = buildmesh (poly(NC));
+mesh Th = buildmesh (poly(numMeshCells));
 
 // shows Mesh, slows down the steps a lot
 //Th= adaptmesh(Th,1./50,IsMetric=1);
 //plot(Th);
 
 
+// Th - the mesh
+// P1 - piecewise linear continuous finite element (2d, 3d, surface 3d), the degrees of freedom are the vertices values
+// Vh - the finite element space
 fespace Vh(Th,P1);
-// variables on the mesh
+
+// variables(FE-functions) on the mesh
 Vh u1,u2;
 
-int[int] BC = 0:1:numSides-1;      // label indexes for each disk
-                            // used for the boundary condition
+int[int] BC = 0:1:numSides-1;       // label indexes for each disk
+                                    // used for the boundary condition
 
 // Define the problem in weak form
 varf a(u1,u2) = int2d(Th)
