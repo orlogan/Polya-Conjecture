@@ -60,7 +60,7 @@ verbosity = 0;                                             // global variable in
 real initTime = clock();                                   // saves clock time
 
 //polygon
-int numSides = 5;
+int numSides = 3;
 int numEigenvalues = 0;
 real innerRadius = 0.5;                               // minimal distance from center of the polygon to a vertex
 real outerRadius = 1.5;                               // maximal distance from center of the polygon to a vertex
@@ -83,12 +83,26 @@ int iterations = 1;
 int[int] numMeshCells(numSides);  
 numMeshCells = 20;
 
-// calculate polygon data
-angles = calculateAngles(numSides, deltaAngleScale);
-radii = calculateRadii(numSides, innerRadius, outerRadius);
-calculateCoords(numSides, xx, yy, angles, radii);
+// calculate polygon data from random points
+//angles = calculateAngles(numSides, deltaAngleScale);
+//radii = calculateRadii(numSides, innerRadius, outerRadius);
+//calculateCoords(numSides, xx, yy, angles, radii);
 
+// calculate polygon data for equilateral triangle
+// top vertex
+xx[0] = 0.0;
+yy[0] = 0.866;    // 2*sqrt(3) / 4
 
+xx[1] = -1.0;
+yy[1] = -0.866;
+
+xx[2] = 1.0;
+yy[2] = -0.866;
+
+// print the vertices (for triangles)
+      cout << "(" << xx[0] << "," << yy[0] << ") " <<
+      "(" << xx[1] << "," << yy[1] << ") " << 
+      "(" << xx[2] << "," << yy[2] << ") " << endl; 
 
 // ind1 - an index for the vertices/sides of the polygon    [0,1,2,3,4]
 // ind2 - ind1 shifted to the right one                     [4,0,1,2,3]
@@ -222,10 +236,13 @@ real[int] integrals(numSides);
 //integrals[i] = int1d(Th,i)((dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunction[numEigenvalues])*N.y)^2);
 //cout << "Integrals " << integrals << endl;
 
+// Only change one vertex
+xx[0] = xx[0]-stepSize*derx[0];
+yy[0] = yy[0]-stepSize*dery[0];
 
-
-xx = xx-stepSize*derx;
-yy = yy-stepSize*dery;
+// Change every vertex
+//xx = xx-stepSize*derx;
+//yy = yy-stepSize*dery;
 
 // decrease step size as time goes on
 if(iterations % stepSizeDuration == 0){
@@ -239,7 +256,10 @@ cout << "iter = " << iterations << " " << endl <<
       "\t Step Size: " << stepSize << endl <<
       "\t Max Sidelength Diff: " << maxSidelengthDiff << endl <<
       "\t amax - amin: " << amax-amin << endl <<
-      "\t Polygon Area: " << polygonArea << endl;
+      "\t Polygon Area: " << polygonArea << endl <<
+      "\t (" << xx[0] << "," << yy[0] << ") " <<
+      "(" << xx[1] << "," << yy[1] << ") " << 
+      "(" << xx[2] << "," << yy[2] << ") " << endl; 
 }
 
 cout << "Calculated in " << clock() - initTime << " seconds..." << endl;
