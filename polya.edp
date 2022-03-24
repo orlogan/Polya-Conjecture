@@ -1,6 +1,11 @@
 // run code with: FreeFem++ polya.edp
 //general explination http://www.cmap.polytechnique.fr/~beniamin.bogosel/faber_krahn_polygons.html
 
+// TODO: 
+// 0. Label Output
+// 1. Record basic setup (a couple different number of sides)
+// 2. Record exaggerated vertices
+// 3. Fix two points of a triangle
 
 //returns a vector of random numbers in [0,1]
 func real[int] rand(int h){
@@ -51,14 +56,14 @@ func int calculateCoords(int numSides, real[int] &xx, real[int] &yy, real[int] a
 //
 // CONSTANTS
 //
-verbosity = 0;                                        // global variable in FreeFem that determines how much output it prints (from 0 to 3)
+verbosity = 0;                                             // global variable in FreeFem that determines how much output it prints (from 0 to 3)
 real initTime = clock();                                   // saves clock time
 
 //polygon
 int numSides = 5;
 int numEigenvalues = 0;
-real innerRadius = 0.5;
-real outerRadius = 1.5;
+real innerRadius = 0.5;                               // minimal distance from center of the polygon to a vertex
+real outerRadius = 1.5;                               // maximal distance from center of the polygon to a vertex
 real deltaAngleScale = 0.5;                           // changes how different the polygon is from regular
 real[int] xx(numSides);                               // x value for each vertex
 real[int] yy(numSides);                               // y value for each vertex
@@ -103,14 +108,14 @@ ind3(0:numSides-2) = 1:numSides-1;
 // TODO: terminate early if eigenvalue changes less than a cutoff value
 while(iterations <= maxIterations){
 
-
+// calculate the border of our polygon
 border poly(t=0,1; i){
     x=(1-t)*xx[i]+t*xx[ind3(i)]; 
     y=(1-t)*yy[i]+t*yy[ind3(i)];
     label=i;
 }
 
-
+// build mesh using the border above
 mesh Th = buildmesh (poly(numMeshCells));
 
 // shows Mesh, slows down the steps a lot
@@ -139,7 +144,7 @@ varf a(u1,u2) = int2d(Th)
 varf b([u1],[u2]) = int2d(Th)(  u1*u2 ) ; 
 
 // define matrices for the eigenvalue problem
-matrix A= a(Vh,Vh,solver=Crout,factorize=1); 
+matrix A= a(Vh,Vh,solver=Crout,factorize=1);          // does a LU decomposition on a (I believe a is the two distinct triangular matrices)
 matrix B= b(Vh,Vh,solver=CG,eps=1e-20); 
 
 // we are interested only in the first eigenvalue
@@ -157,7 +162,6 @@ if(int2d(Th)(eigenFunction[numEigenvalues])<0){
 // partial derivatives of lambda wrt x/y
 real[int] derx(numSides);
 real[int] dery(numSides);
-// 
 real[int] ax(numSides);
 real[int] ay(numSides);
 mesh Eh = emptymesh(Th);
@@ -218,7 +222,7 @@ real[int] integrals(numSides);
 //integrals[i] = int1d(Th,i)((dx(eigenFunction[numEigenvalues])*N.x+dy(eigenFunction[numEigenvalues])*N.y)^2);
 //cout << "Integrals " << integrals << endl;
 
-// TODO: See if removing specific vertices from the update below breaks things
+
 
 xx = xx-stepSize*derx;
 yy = yy-stepSize*dery;
@@ -230,8 +234,12 @@ stepSize = stepSize / stepDecreaseFactor;
 
 iterations++;
 plot(eigenFunction[numEigenvalues],fill=true,ShowAxes = 0);
-cout << iterations << " " << eigenValue[0]+polygonArea << " " << stepSize << " " << maxSidelengthDiff << 
-" " << amax-amin << " " << polygonArea << endl;
+cout << "iter = " << iterations << " " << endl << 
+      "\t Eigenvalue + polygonArea: " << eigenValue[0]+polygonArea << endl <<
+      "\t Step Size: " << stepSize << endl <<
+      "\t Max Sidelength Diff: " << maxSidelengthDiff << endl <<
+      "\t amax - amin: " << amax-amin << endl <<
+      "\t Polygon Area: " << polygonArea << endl;
 }
 
 cout << "Calculated in " << clock() - initTime << " seconds..." << endl;
