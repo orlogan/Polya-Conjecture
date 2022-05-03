@@ -1,0 +1,4 @@
+* Inbox
+** TODO Import Bogesels explination and take notes
+** TODO Take photos of graphic
+** TODO Make Notes file for explination of the math

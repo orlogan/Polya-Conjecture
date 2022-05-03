@@ -4,5 +4,9 @@ This code is heavily based on [Dr. Beniamin Bogosel's](http://www.cmap.polytechn
 ### How to Run the Code
 Install [FreeFEM](https://freefem.org/), a language/extension to c++ for solving PDE's.
 
+``` sh
+FreeFem++ polya.edp
+```
+
 #### Things to Keep in Mind
 Most of, if not all, of the documentation that I've used is [on this webpage](https://doc.freefem.org/documentation/finite-element.html).
